@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://robs-travel.co.uk/sitemap.xml
