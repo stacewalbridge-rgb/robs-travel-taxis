@@ -11,6 +11,7 @@ const runoutBands=[[5,0],[6,10],[7,12],[8,14],[9,16],[10,18],[15,20],[20,30],[25
 const fixed=[
  {keys:['heathrow'],prices:[400,460,550]},{keys:['gatwick'],prices:[450,500,600]},{keys:['bristol airport','bs48 3dy'],prices:[240,290,340]},{keys:['birmingham airport'],prices:[380,420,490]},{keys:['manchester airport'],prices:[500,570,660]},
  {keys:['exeter airport','ex5 2bd'],prices:[150,170,190]},{keys:['exeter st davids','ex4 4nt'],prices:[120,150,180]},{keys:['newquay airport','tr8 4rq'],prices:[90,110,120]}
+ ,{keys:['hartland quay','hartland','ex39 6du'],prices:[60,80,110]}
 ];
 function vehicleIndex(){const v=document.getElementById('vehicle').value;return v==='standard'?0:v==='mpv'?1:2}
 function fixedFare(a,b){const text=(a+' '+b).toLowerCase();const bude=/bude|stratton|poughill|widemouth|marhamchurch|kilkhampton/.test(text);if(!bude)return null;const route=fixed.find(r=>r.keys.some(k=>text.includes(k)));return route?route.prices[vehicleIndex()]:null}
