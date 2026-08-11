@@ -1,11 +1,10 @@
-const GOOGLE_MAPS_KEY='AIzaSyB-XFiKNlAOohHgBnEPtzk4gUwFwk-OqAs';
 const BUSINESS_PHONE='447771824141';
 let pickupPlace=null,destinationPlace=null,lastEstimate=null;
 
 const menu=document.querySelector('.menu'),nav=document.querySelector('.navlinks');
 menu?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));});
 
-function loadMaps(){return new Promise((resolve,reject)=>{if(window.google?.maps?.places)return resolve();window.__rtMapsReady=resolve;const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_KEY)}&libraries=places&callback=__rtMapsReady&v=weekly`;s.async=true;s.defer=true;s.onerror=reject;document.head.appendChild(s);});}
+function loadMaps(){return new Promise((resolve,reject)=>{if(window.google?.maps?.places)return resolve();const key=String(window.ROBS_TRAVEL_CONFIG?.googleMapsApiKey||'').trim();if(!key)return reject(new Error('Google Maps configuration unavailable'));window.__rtMapsReady=resolve;const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=__rtMapsReady&v=weekly`;s.async=true;s.defer=true;s.onerror=reject;document.head.appendChild(s);});}
 function attachPlace(id,setter){const input=document.getElementById(id);const ac=new google.maps.places.Autocomplete(input,{componentRestrictions:{country:'gb'},fields:['formatted_address','geometry','name','place_id']});ac.addListener('place_changed',()=>{const p=ac.getPlace();if(!p.geometry)return;input.value=p.formatted_address||p.name;setter({address:input.value,location:p.geometry.location,placeId:p.place_id});});input.addEventListener('input',()=>setter(null));}
 loadMaps().then(()=>{attachPlace('pickup',p=>pickupPlace=p);attachPlace('destination',p=>destinationPlace=p);}).catch(()=>document.getElementById('mapsStatus').textContent='Google address search could not load. Please refresh and try again.');
 
