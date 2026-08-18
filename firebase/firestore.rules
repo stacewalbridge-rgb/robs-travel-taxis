@@ -1,0 +1,187 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function hasVerifiedPhone() { return signedIn() && request.auth.token.phone_number is string; }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function activeUser() { return signedIn() && exists(userPath()) && get(userPath()).data.active == true; }
+    function roleIs(role) { return activeUser() && get(userPath()).data.role == role; }
+    function isOwner() { return roleIs('owner'); }
+    function isDriver() { return roleIs('driver'); }
+    function isStaff() { return isOwner() || isDriver(); }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isOwner());
+      allow create, update, delete: if isOwner();
+    }
+
+    match /customers/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isOwner());
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && hasVerifiedPhone()
+        && request.resource.data.phoneNumber == request.auth.token.phone_number
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2;
+      allow delete: if signedIn() && (request.auth.uid == uid || isOwner());
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if (
+        hasVerifiedPhone()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.mobile == request.auth.token.phone_number
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.customerToken is string
+        && request.resource.data.customerToken.size() >= 32
+        && request.resource.data.keys().hasAll([
+          'pickup','destination','journeyDate','journeyTime','createdAt','status','customerToken',
+          'customerUid','name','mobile'
+        ])
+      ) || (
+        isStaff()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdByRole in ['driver','owner']
+        && request.resource.data.customerToken is string
+        && request.resource.data.customerToken.size() >= 32
+        && request.resource.data.pickup is string
+        && request.resource.data.pickup.size() >= 2
+        && request.resource.data.destination is string
+        && request.resource.data.destination.size() >= 2
+        && request.resource.data.journeyDate is string
+        && request.resource.data.journeyTime is string
+        && request.resource.data.keys().hasAll([
+          'pickup','destination','journeyDate','journeyTime','createdAt','status','customerToken',
+          'createdBy','createdByRole'
+        ])
+      );
+
+      allow get: if isStaff() || (signedIn() && resource.data.customerUid == request.auth.uid);
+      allow list: if isStaff();
+
+      allow update: if (
+        signedIn()
+        && resource.data.customerUid == request.auth.uid
+        && resource.data.status == 'proposed'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','customerDecision','customerRespondedAt','updatedAt',
+          'proposedDate','proposedTime','proposalMessage'
+        ])
+        && request.resource.data.status in [
+          'customer_accepted','customer_countered','declined'
+        ]
+        && request.resource.data.customerDecision in [
+          'accepted','countered','declined'
+        ]
+      ) || (
+        signedIn()
+        && resource.data.customerUid == request.auth.uid
+        && resource.data.status in [
+          'pending','proposed','customer_countered','customer_accepted',
+          'confirmed','enroute','arrived'
+        ]
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','cancelReason','cancelledAt','cancelledBy','updatedAt'
+        ])
+        && request.resource.data.cancelledBy == 'customer'
+        && request.resource.data.cancelReason is string
+        && request.resource.data.cancelReason.size() >= 2
+        && request.resource.data.cancelReason.size() <= 300
+      ) || (
+        signedIn()
+        && resource.data.customerUid == request.auth.uid
+        && resource.data.status == 'completed'
+        && resource.data.customerToDriverRatingSubmitted == false
+        && resource.data.ratingDeadlineAt is timestamp
+        && request.time <= resource.data.ratingDeadlineAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'customerToDriverRating','customerToDriverRatingSubmitted','customerToDriverComment','updatedAt'
+        ])
+        && request.resource.data.customerToDriverRating is int
+        && request.resource.data.customerToDriverRating >= 1
+        && request.resource.data.customerToDriverRating <= 5
+        && request.resource.data.customerToDriverRatingSubmitted == true
+        && request.resource.data.customerToDriverComment is string
+        && request.resource.data.customerToDriverComment.size() <= 500
+        && (
+          request.resource.data.customerToDriverRating >= 4
+          || request.resource.data.customerToDriverComment.size() >= 2
+        )
+      ) || isOwner() || (
+        isDriver()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','driverId','driverName','updatedAt',
+          'proposedDate','proposedTime','proposalMessage','customerDecision',
+          'journeyDate','journeyTime','confirmedAt','arrivedAt',
+          'onboardAt','enrouteAt','driverLocation','driverLocationUpdatedAt','archivedBy'
+        ])
+      ) || (
+        isDriver()
+        && resource.data.status == 'onboard'
+        && request.resource.data.status == 'completed'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','driverId','driverName','updatedAt','completedAt','ratingDeadlineAt',
+          'customerToDriverRating','customerToDriverRatingSubmitted','customerToDriverComment',
+          'driverToCustomerRating','driverToCustomerRatingSubmitted','driverToCustomerComment'
+        ])
+        && request.resource.data.customerToDriverRating == 5
+        && request.resource.data.customerToDriverRatingSubmitted == false
+        && request.resource.data.customerToDriverComment == ''
+        && request.resource.data.driverToCustomerRating == 5
+        && request.resource.data.driverToCustomerRatingSubmitted == false
+        && request.resource.data.driverToCustomerComment == ''
+      ) || (
+        isDriver()
+        && resource.data.status == 'completed'
+        && resource.data.driverId == request.auth.uid
+        && resource.data.driverToCustomerRatingSubmitted == false
+        && resource.data.ratingDeadlineAt is timestamp
+        && request.time <= resource.data.ratingDeadlineAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'driverToCustomerRating','driverToCustomerRatingSubmitted','driverToCustomerComment','updatedAt'
+        ])
+        && request.resource.data.driverToCustomerRating is int
+        && request.resource.data.driverToCustomerRating >= 1
+        && request.resource.data.driverToCustomerRating <= 5
+        && request.resource.data.driverToCustomerRatingSubmitted == true
+        && request.resource.data.driverToCustomerComment is string
+        && request.resource.data.driverToCustomerComment.size() <= 500
+        && (
+          request.resource.data.driverToCustomerRating >= 4
+          || request.resource.data.driverToCustomerComment.size() >= 2
+        )
+      );
+      allow delete: if isOwner();
+    }
+
+    match /customerBookingStatus/{token} {
+      allow get: if signedIn();
+      allow list: if isStaff();
+      allow write: if false;
+    }
+
+    match /publicStaffPresence/{uid} {
+      allow read: if true;
+      allow create, update: if isStaff()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['online','updatedAt'])
+        && request.resource.data.online is bool;
+      allow delete: if isOwner() || (signedIn() && request.auth.uid == uid);
+    }
+
+    match /driverStatus/{uid} {
+      allow read: if isStaff();
+      allow create, update: if signedIn() && request.auth.uid == uid && activeUser();
+      allow delete: if isOwner() || (signedIn() && request.auth.uid == uid);
+    }
+
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+  }
+}
