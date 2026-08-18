@@ -14,35 +14,58 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT_ID: robs-travel-taxis
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ROBS_TRAVEL }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ROBS_TRAVEL }}
-          project_id: robs-travel-taxis
-          create_credentials_file: true
-          export_environment_variables: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
+      - name: Validate Firebase credential and create ADC file
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, sys
+          raw = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON', '')
+          if not raw.strip():
+              raise SystemExit('FIREBASE_SERVICE_ACCOUNT_ROBS_TRAVEL secret is empty')
+          try:
+              data = json.loads(raw)
+          except Exception as exc:
+              raise SystemExit(f'Firebase service-account secret is not valid JSON: {exc}')
+          required = ['type','project_id','client_email','private_key']
+          missing = [k for k in required if not data.get(k)]
+          if missing:
+              raise SystemExit('Firebase service-account JSON is missing: ' + ', '.join(missing))
+          if data['project_id'] != 'robs-travel-taxis':
+              raise SystemExit(f"Wrong Firebase project in secret: {data['project_id']}")
+          path = pathlib.Path('/tmp/robs-travel-firebase-service-account.json')
+          path.write_text(json.dumps(data), encoding='utf-8')
+          path.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f'GOOGLE_APPLICATION_CREDENTIALS={path}\n')
+              fh.write('GOOGLE_CLOUD_PROJECT=robs-travel-taxis\n')
+              fh.write('GCLOUD_PROJECT=robs-travel-taxis\n')
+          print('Firebase service-account credential validated for robs-travel-taxis')
+          PY
 
-      - name: Validate deployment inputs
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Validate deployment files
         run: |
           test -s firebase/firestore.rules
           test -s firebase.json
           firebase --version
 
+      - name: Confirm Firebase project access
+        run: firebase projects:list --json --non-interactive > /tmp/firebase-projects.json
+
       - name: Deploy Firestore rules
-        env:
-          GOOGLE_CLOUD_PROJECT: robs-travel-taxis
-          GCLOUD_PROJECT: robs-travel-taxis
-        run: firebase deploy --only firestore:rules --project robs-travel-taxis --non-interactive
+        run: firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive
