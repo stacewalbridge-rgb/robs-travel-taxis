@@ -14,6 +14,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       FIREBASE_PROJECT_ID: robs-travel-taxis
       FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ROBS_TRAVEL }}
@@ -27,45 +28,41 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validate Firebase credential and create ADC file
+      - name: Prepare Google credentials
         shell: bash
         run: |
           python - <<'PY'
-          import json, os, pathlib, sys
+          import json, os, pathlib
           raw = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON', '')
           if not raw.strip():
-              raise SystemExit('FIREBASE_SERVICE_ACCOUNT_ROBS_TRAVEL secret is empty')
-          try:
-              data = json.loads(raw)
-          except Exception as exc:
-              raise SystemExit(f'Firebase service-account secret is not valid JSON: {exc}')
-          required = ['type','project_id','client_email','private_key']
-          missing = [k for k in required if not data.get(k)]
-          if missing:
-              raise SystemExit('Firebase service-account JSON is missing: ' + ', '.join(missing))
-          if data['project_id'] != 'robs-travel-taxis':
-              raise SystemExit(f"Wrong Firebase project in secret: {data['project_id']}")
-          path = pathlib.Path('/tmp/robs-travel-firebase-service-account.json')
+              raise SystemExit('Missing GitHub secret FIREBASE_SERVICE_ACCOUNT_ROBS_TRAVEL')
+          data = json.loads(raw)
+          if data.get('project_id') != 'robs-travel-taxis':
+              raise SystemExit('Firebase credential is for the wrong project')
+          for key in ('client_email', 'private_key'):
+              if not data.get(key):
+                  raise SystemExit(f'Firebase credential is missing {key}')
+          path = pathlib.Path('/tmp/firebase-service-account.json')
           path.write_text(json.dumps(data), encoding='utf-8')
           path.chmod(0o600)
-          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
-              fh.write(f'GOOGLE_APPLICATION_CREDENTIALS={path}\n')
-              fh.write('GOOGLE_CLOUD_PROJECT=robs-travel-taxis\n')
-              fh.write('GCLOUD_PROJECT=robs-travel-taxis\n')
-          print('Firebase service-account credential validated for robs-travel-taxis')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+              env.write(f'GOOGLE_APPLICATION_CREDENTIALS={path}\n')
+              env.write('GOOGLE_CLOUD_PROJECT=robs-travel-taxis\n')
+              env.write('GCLOUD_PROJECT=robs-travel-taxis\n')
+          print('Firebase credentials prepared successfully')
           PY
 
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools@latest
-
-      - name: Validate deployment files
+      - name: Validate Firestore files
+        shell: bash
         run: |
           test -s firebase/firestore.rules
           test -s firebase.json
-          firebase --version
-
-      - name: Confirm Firebase project access
-        run: firebase projects:list --json --non-interactive > /tmp/firebase-projects.json
+          python -m json.tool firebase.json >/dev/null
 
       - name: Deploy Firestore rules
-        run: firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive
+        shell: bash
+        run: |
+          npx --yes firebase-tools@latest deploy \
+            --only firestore:rules \
+            --project "$FIREBASE_PROJECT_ID" \
+            --non-interactive
