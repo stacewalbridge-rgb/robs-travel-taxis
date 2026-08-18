@@ -1,3 +1,4 @@
+// Rob's Travel live rules — staff manual booking create + staff diary visibility enabled.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
