@@ -1,5 +1,6 @@
 name: Deploy Firestore Rules
 
+# Triggered 2026-08-18 after staff booking/save rule repair.
 on:
   workflow_dispatch:
   push:
