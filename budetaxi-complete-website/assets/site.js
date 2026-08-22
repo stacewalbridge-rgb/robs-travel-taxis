@@ -1,57 +1,190 @@
+const logoFix=document.createElement('style');
+logoFix.textContent=`.brand img,.footer-brand img{clip-path:circle(43% at 50% 50%);object-fit:cover}.brand{overflow:visible}`;
+document.head.appendChild(logoFix);
+
 let pickupPlace=null,destinationPlace=null,lastEstimate=null;
-const menu=document.querySelector('.menu'),nav=document.querySelector('nav');menu?.addEventListener('click',()=>nav?.classList.toggle('open'));
+const menu=document.querySelector('.menu'),nav=document.querySelector('.navlinks')||document.querySelector('nav');
+menu?.addEventListener('click',()=>{const open=nav?.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));});
+
 function norm(v=''){return String(v).toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
-function loadMasterPricing(){if(window.ROBS_TRAVEL_FIXED_FARES&&window.ROBS_TRAVEL_LONG_DISTANCE_FARES)return Promise.resolve(true);return new Promise(resolve=>{const s=document.createElement('script');s.src='https://book.robs-travel.co.uk/fixed-fares.js?v=master-20260812-runout2';s.async=true;s.onload=()=>resolve(true);s.onerror=()=>resolve(false);document.head.appendChild(s)})}const pricingReady=loadMasterPricing();
-function loadMaps(){return new Promise((resolve,reject)=>{if(window.google?.maps?.places)return resolve();const key=String(window.ROBS_TRAVEL_CONFIG?.googleMapsApiKey||'').trim();if(!key)return reject(new Error('Google Maps configuration unavailable'));window.__budeMapsReady=resolve;const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=__budeMapsReady&v=weekly`;s.async=true;s.defer=true;s.onerror=reject;document.head.appendChild(s)})}
-function attachPlace(id,setter){const input=document.getElementById(id);if(!input)return;const ac=new google.maps.places.Autocomplete(input,{componentRestrictions:{country:'gb'},fields:['formatted_address','geometry','name','place_id']});ac.addListener('place_changed',()=>{const p=ac.getPlace();if(!p.geometry)return;input.value=p.formatted_address||p.name;setter({address:input.value,location:p.geometry.location,placeId:p.place_id})});input.addEventListener('input',()=>setter(null))}
+function includesTerm(value,terms){const v=norm(value);return (terms||[]).some(x=>{const n=norm(x);return !!n&&v.includes(n)})}
+
+function loadMasterPricing(){
+  if(window.ROBS_TRAVEL_FIXED_FARES&&window.ROBS_TRAVEL_LONG_DISTANCE_FARES)return Promise.resolve(true);
+  return new Promise(resolve=>{const s=document.createElement('script');s.src='https://book.robs-travel.co.uk/fixed-fares.js?v=shared-fares-20260822';s.async=true;s.onload=()=>resolve(true);s.onerror=()=>resolve(false);document.head.appendChild(s)});
+}
+const pricingReady=loadMasterPricing();
+
+function loadMaps(){
+  return new Promise((resolve,reject)=>{
+    if(window.google?.maps?.places)return resolve();
+    const key=String(window.ROBS_TRAVEL_CONFIG?.googleMapsApiKey||'').trim();
+    if(!key)return reject(new Error('Google Maps configuration unavailable'));
+    window.__sharedRtMapsReady=resolve;
+    const s=document.createElement('script');
+    s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=__sharedRtMapsReady&v=weekly`;
+    s.async=true;s.defer=true;s.onerror=reject;document.head.appendChild(s);
+  });
+}
+function attachPlace(id,setter){
+  const input=document.getElementById(id);if(!input)return;
+  const ac=new google.maps.places.Autocomplete(input,{componentRestrictions:{country:'gb'},fields:['formatted_address','geometry','name','place_id']});
+  ac.addListener('place_changed',()=>{const p=ac.getPlace();if(!p.geometry)return;input.value=p.formatted_address||p.name;setter({address:input.value,location:p.geometry.location,placeId:p.place_id})});
+  input.addEventListener('input',()=>setter(null));
+}
 loadMaps().then(()=>{attachPlace('pickup',p=>pickupPlace=p);attachPlace('destination',p=>destinationPlace=p)}).catch(()=>{const s=document.getElementById('mapsStatus');if(s)s.textContent='Google address search could not load. Please refresh and try again.'});
+
 const fallbackFixed=[
- {label:'Exeter St Davids / Exeter Hospital',from:['','bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock'],to:['exeter st davids','exeter st davids railway station','exeter st davids train station','bonhay road','ex4 4nt','royal devon and exeter hospital','rd e hospital','wonford hospital','ex2 5dw'],bidirectional:true,prices:{day:{'1-4':120,'5-6':150,'7-8':180},night:{'1-4':140,'5-6':180,'7-8':200}}},
- {label:'Exeter Airport',from:['','bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock'],to:['exeter airport','clyst honiton','ex5 2bd'],bidirectional:true,prices:{day:{'1-4':150,'5-6':170,'7-8':190},night:{'1-4':170,'5-6':190,'7-8':200}}},
- {label:'Newquay Airport',from:['','bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock'],to:['newquay airport','cornwall airport newquay','st mawgan','tr8 4rq'],bidirectional:true,prices:{day:{'1-4':90,'5-6':110,'7-8':120},night:{'1-4':120,'5-6':160,'7-8':180}}},
- {label:'Okehampton / Okehampton Railway Station',from:['','bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock','morwenstow','kilkhampton','marsland','welcombe','northcott','sandymouth'],to:['okehampton','okehampton railway station','okehampton train station','station road okehampton','ex20 1ej'],bidirectional:true,zone:{centre:{lat:50.7382,lng:-4.0018},radiusMiles:3},prices:{day:{'1-4':90,'5-6':120,'7-8':150},night:{'1-4':120,'5-6':150,'7-8':190}}}
+ {label:'Exeter St Davids / Exeter Hospital',from:['bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock'],to:['exeter st davids','exeter st davids railway station','exeter st davids train station','bonhay road','ex4 4nt','royal devon and exeter hospital','rd e hospital','wonford hospital','ex2 5dw'],bidirectional:true,prices:{day:{'1-4':120,'5-6':150,'7-8':180},night:{'1-4':140,'5-6':180,'7-8':200}}},
+ {label:'Exeter Airport',from:['bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock'],to:['exeter airport','clyst honiton','ex5 2bd'],bidirectional:true,prices:{day:{'1-4':150,'5-6':170,'7-8':190},night:{'1-4':170,'5-6':190,'7-8':200}}},
+ {label:'Newquay Airport',from:['bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock'],to:['newquay airport','cornwall airport newquay','st mawgan','tr8 4rq'],bidirectional:true,prices:{day:{'1-4':90,'5-6':110,'7-8':120},night:{'1-4':120,'5-6':160,'7-8':180}}},
+ {label:'Okehampton / Okehampton Railway Station',from:['bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock','morwenstow','kilkhampton','marsland','welcombe','northcott','sandymouth'],to:['okehampton','okehampton railway station','okehampton train station','station road okehampton','ex20 1ej'],bidirectional:true,zone:{centre:{lat:50.7382,lng:-4.0018},radiusMiles:3},prices:{day:{'1-4':90,'5-6':120,'7-8':150},night:{'1-4':120,'5-6':150,'7-8':190}}}
 ];
-const fallbackLong=[{label:'Heathrow Airport',aliases:['heathrow airport','london heathrow','heathrow terminal 2','heathrow terminal 3','heathrow terminal 4','heathrow terminal 5','tw6'],prices:{standard:400,mpv:460,eight:550}},{label:'Gatwick Airport',aliases:['gatwick airport','london gatwick','gatwick north terminal','gatwick south terminal','rh6'],prices:{standard:450,mpv:500,eight:600}},{label:'Bristol Airport',aliases:['bristol airport','bristol international airport','bs48 3dy'],prices:{standard:240,mpv:290,eight:340}},{label:'Birmingham Airport',aliases:['birmingham airport','bhx airport','b26 3qj'],prices:{standard:380,mpv:420,eight:490}},{label:'Manchester Airport',aliases:['manchester airport','man airport','m90 1qx'],prices:{standard:500,mpv:570,eight:660}}];
-const budeTerms=['','bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock','morwenstow','kilkhampton','marsland','welcombe','northcott','sandymouth'];
+const fallbackLong=[
+ {label:'Heathrow Airport',aliases:['heathrow airport','london heathrow','heathrow terminal 2','heathrow terminal 3','heathrow terminal 4','heathrow terminal 5','tw6'],prices:{standard:400,mpv:460,eight:550}},
+ {label:'Gatwick Airport',aliases:['gatwick airport','london gatwick','gatwick north terminal','gatwick south terminal','rh6'],prices:{standard:450,mpv:500,eight:600}},
+ {label:'Bristol Airport',aliases:['bristol airport','bristol international airport','bs48 3dy'],prices:{standard:240,mpv:290,eight:340}},
+ {label:'Birmingham Airport',aliases:['birmingham airport','bhx airport','b26 3qj'],prices:{standard:380,mpv:420,eight:490}},
+ {label:'Manchester Airport',aliases:['manchester airport','man airport','m90 1qx'],prices:{standard:500,mpv:570,eight:660}}
+];
+const budeTerms=['bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock','morwenstow','kilkhampton','marsland','welcombe','northcott','sandymouth'];
 const runoutBands=[[5,0],[6,10],[7,12],[8,14],[9,16],[10,18],[15,20],[20,30],[25,40],[30,50],[35,60],[40,70],[45,80],[50,90]];
 const NORTH_CORNWALL_TARIFFS={
  tariff1:{label:'R1 • daytime',standard:{first:4.20,step:.30},large:{first:6.30,step:.45}},
  tariff2:{label:'R2 • night / weekend / bank holiday',standard:{first:5.00,step:.40},large:{first:7.40,step:.50}},
  tariff4:{label:'R4 • Christmas / New Year',standard:{first:8.20,step:.60},large:{first:12.10,step:.90}}
 };
+
 function passengerBand(){const p=String(document.getElementById('passengers')?.value||'1-4');if(p.includes('7')||p.includes('8'))return'7-8';if(p.includes('5')||p.includes('6'))return'5-6';return'1-4'}
 function vehicleTier(){const v=document.getElementById('vehicle')?.value||'standard';return v==='minibus'?'eight':v==='mpv'?'mpv':'standard'}
 function requiredVehicleForPassengers(){const band=passengerBand();return band==='7-8'?'minibus':band==='5-6'?'mpv':'standard'}
 function syncVehicleToPassengers(){const vehicle=document.getElementById('vehicle');if(!vehicle)return;vehicle.value=requiredVehicleForPassengers()}
 document.getElementById('passengers')?.addEventListener('change',syncVehicleToPassengers);
 syncVehicleToPassengers();
+
 function localDateKey(dt){return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`}
 function dateTime(date,time){return new Date(`${date}T${time||'12:00'}:00`)}
 function isTariff4Date(dt){
- const y=dt.getFullYear(),m=dt.getMonth();
- const christmasYear=m===0?y-1:y;
- const christmasStart=new Date(christmasYear,11,24,18,0,0,0);
- const christmasEndDay=new Date(christmasYear,11,27,7,0,0,0);
- const christmasEnd=christmasEndDay.getDay()===0?new Date(christmasYear,11,28,7,0,0,0):christmasEndDay;
- if(dt>=christmasStart&&dt<christmasEnd)return true;
- const newYearYear=m===11?y:y-1;
- const newYearStart=new Date(newYearYear,11,31,18,0,0,0);
- const newYearEnd=new Date(newYearYear+1,0,2,7,0,0,0);
- return dt>=newYearStart&&dt<newYearEnd;
+  const y=dt.getFullYear(),m=dt.getMonth();
+  const christmasYear=m===0?y-1:y;
+  const christmasStart=new Date(christmasYear,11,24,18,0,0,0);
+  const normalChristmasEnd=new Date(christmasYear,11,27,7,0,0,0);
+  const christmasEnd=normalChristmasEnd.getDay()===0?new Date(christmasYear,11,28,7,0,0,0):normalChristmasEnd;
+  if(dt>=christmasStart&&dt<christmasEnd)return true;
+  const newYearYear=m===11?y:y-1;
+  const newYearStart=new Date(newYearYear,11,31,18,0,0,0);
+  const newYearEnd=new Date(newYearYear+1,0,2,7,0,0,0);
+  return dt>=newYearStart&&dt<newYearEnd;
 }
-function bankHolidayWindow(dt){const holidays=window.ROBS_TRAVEL_CONFIG?.fareConfig?.bankHolidays||[],today=localDateKey(dt),mins=dt.getHours()*60+dt.getMinutes();if(holidays.includes(today))return true;const prev=new Date(dt);prev.setDate(prev.getDate()-1);return holidays.includes(localDateKey(prev))&&mins<7*60}
+function bankHolidayWindow(dt){
+  const holidays=window.ROBS_TRAVEL_CONFIG?.fareConfig?.bankHolidays||[];
+  const today=localDateKey(dt),mins=dt.getHours()*60+dt.getMinutes();
+  if(holidays.includes(today))return true;
+  const prev=new Date(dt);prev.setDate(prev.getDate()-1);
+  return holidays.includes(localDateKey(prev))&&mins<7*60;
+}
 function weekendWindow(dt){const day=dt.getDay(),mins=dt.getHours()*60+dt.getMinutes();return (day===6&&mins>=19*60)||day===0||(day===1&&mins<7*60)}
-function tariffInfo(date,time){const dt=dateTime(date,time),mins=dt.getHours()*60+dt.getMinutes();if(isTariff4Date(dt))return{key:'tariff4',...NORTH_CORNWALL_TARIFFS.tariff4,meterOnly:true};if(bankHolidayWindow(dt))return{key:'tariff2',...NORTH_CORNWALL_TARIFFS.tariff2,meterOnly:true};if(weekendWindow(dt))return{key:'tariff2',...NORTH_CORNWALL_TARIFFS.tariff2,meterOnly:true};if(mins<7*60||mins>=19*60)return{key:'tariff2',...NORTH_CORNWALL_TARIFFS.tariff2,meterOnly:false};return{key:'tariff1',...NORTH_CORNWALL_TARIFFS.tariff1,meterOnly:false}}
+function tariffInfo(date,time){
+  const dt=dateTime(date,time),mins=dt.getHours()*60+dt.getMinutes();
+  if(isTariff4Date(dt))return{key:'tariff4',...NORTH_CORNWALL_TARIFFS.tariff4,meterOnly:true};
+  if(bankHolidayWindow(dt))return{key:'tariff2',...NORTH_CORNWALL_TARIFFS.tariff2,meterOnly:true};
+  if(weekendWindow(dt))return{key:'tariff2',...NORTH_CORNWALL_TARIFFS.tariff2,meterOnly:true};
+  if(mins<7*60||mins>=19*60)return{key:'tariff2',...NORTH_CORNWALL_TARIFFS.tariff2,meterOnly:false};
+  return{key:'tariff1',...NORTH_CORNWALL_TARIFFS.tariff1,meterOnly:false};
+}
 function period(date,time){const dt=dateTime(date,time),mins=dt.getHours()*60+dt.getMinutes();return mins<7*60||mins>=19*60?'night':'day'}
 function meterFare(miles,tariffKey){const tariff=NORTH_CORNWALL_TARIFFS[tariffKey],large=passengerBand()!=='1-4',band=tariff[large?'large':'standard'],extraSteps=Math.max(0,Math.ceil((Number(miles)-0.2-1e-9)/0.1));return band.first+(extraSteps*band.step)+1}
+
 function haversine(a,b){const rad=x=>x*Math.PI/180,R=3958.7613,dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng),q=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
 function point(place){return place?.location?{lat:place.location.lat(),lng:place.location.lng()}:null}
-function routeMatch(route,p,d){const from=(route.from||[]).map(norm),to=(route.to||[]).map(norm),f=from.some(x=>p.includes(x))&&to.some(x=>d.includes(x)),r=route.bidirectional!==false&&to.some(x=>p.includes(x))&&from.some(x=>d.includes(x));if(!(f||r))return false;if(route.zone?.centre&&route.zone?.radiusMiles){const target=f?point(destinationPlace):point(pickupPlace);if(!target||haversine(route.zone.centre,target)>Number(route.zone.radiusMiles))return false}return true}
+function routeMatch(route,p,d){
+  const from=(route.from||[]).map(norm).filter(Boolean),to=(route.to||[]).map(norm).filter(Boolean);
+  const f=from.some(x=>p.includes(x))&&to.some(x=>d.includes(x));
+  const r=route.bidirectional!==false&&to.some(x=>p.includes(x))&&from.some(x=>d.includes(x));
+  if(!(f||r))return false;
+  if(route.zone?.centre&&route.zone?.radiusMiles){const target=f?point(destinationPlace):point(pickupPlace);if(!target||haversine(route.zone.centre,target)>Number(route.zone.radiusMiles))return false}
+  return true;
+}
 function priced(table,per,key){return Number((table?.[per]||table?.day||table||{})[key])||0}
-function masterFixedFare(a,b,date,time){const p=norm(a),d=norm(b),all=`${p} ${d}`,inBude=budeTerms.some(x=>p.includes(norm(x))||d.includes(norm(x)));if(!inBude)return null;const per=period(date,time),tier=vehicleTier(),band=passengerBand(),masterLongs=Array.isArray(window.ROBS_TRAVEL_LONG_DISTANCE_FARES)?window.ROBS_TRAVEL_LONG_DISTANCE_FARES:[],masterFixeds=Array.isArray(window.ROBS_TRAVEL_FIXED_FARES)?window.ROBS_TRAVEL_FIXED_FARES:[];const longMatch=r=>(r.aliases||[]).some(x=>all.includes(norm(x))),masterLong=masterLongs.find(longMatch),localLong=fallbackLong.find(longMatch),long=masterLong||localLong;if(long){let price=priced(long.prices,per,tier);if(!price&&masterLong&&localLong)price=priced(localLong.prices,per,tier);if(price)return{price,label:long.label||localLong?.label||'Fixed long-distance fare',fixed:true}}const masterFixed=masterFixeds.find(r=>routeMatch(r,p,d)),localFixed=fallbackFixed.find(r=>routeMatch(r,p,d)),fixed=masterFixed||localFixed;if(!fixed)return null;let price=priced(fixed.prices,per,band);if(!price&&masterFixed&&localFixed)price=priced(localFixed.prices,per,band);return price?{price,label:fixed.label||localFixed?.label||'Fixed fare',fixed:true}:null}
-async function routeBetween(origin,destination){const response=await fetch('https://book.robs-travel.co.uk/api/route',{method:'POST',headers:{'content-type':'text/plain;charset=UTF-8'},body:JSON.stringify({origin,destination,intermediates:[]})});const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok||!data.distanceMeters)throw new Error('The route service could not calculate this journey. Please try again.');return{distanceMeters:data.distanceMeters,durationSeconds:data.durationSeconds||0}}
-async function route(){if(!pickupPlace||!destinationPlace)throw new Error('Please choose both addresses from the Google suggestions.');return routeBetween({lat:pickupPlace.location.lat(),lng:pickupPlace.location.lng(),placeId:pickupPlace.placeId,address:pickupPlace.address},{lat:destinationPlace.location.lat(),lng:destinationPlace.location.lng(),placeId:destinationPlace.placeId,address:destinationPlace.address})}
-async function runoutCharge(){const base={lat:50.8308,lng:-4.5460,address:'Bude town centre'},p=norm(pickupPlace.address),d=norm(destinationPlace.address),candidates=[];if(budeTerms.some(x=>p.includes(norm(x))))candidates.push(pickupPlace);if(budeTerms.some(x=>d.includes(norm(x))))candidates.push(destinationPlace);if(!candidates.length)candidates.push(pickupPlace,destinationPlace);let best=Infinity;for(const c of candidates){try{const r=await routeBetween(base,{lat:c.location.lat(),lng:c.location.lng(),placeId:c.placeId,address:c.address});best=Math.min(best,r.distanceMeters/1609.344)}catch{const cp=point(c);if(cp)best=Math.min(best,haversine(base,cp))}}if(!Number.isFinite(best))return{charge:0,miles:0};const band=runoutBands.find(x=>best<=x[0]);return band?{charge:band[1],miles:best}:{charge:null,miles:best}}
-const f=document.getElementById('estimateForm');f?.addEventListener('submit',async e=>{e.preventDefault();const b=document.getElementById('estimateButton'),status=document.getElementById('mapsStatus'),date=document.getElementById('date').value,time=document.getElementById('time').value;if(document.getElementById('vehicle').value==='executive'){status.textContent='Executive journeys are individually quoted. Please call Rob’s Travel.';return}b.disabled=true;b.textContent='Calculating route…';try{await pricingReady;const r=await route(),miles=r.distanceMeters/1609.344,minutes=Math.max(1,Math.round(r.durationSeconds/60)),tariff=tariffInfo(date,time),fixed=tariff.meterOnly?null:masterFixedFare(pickupPlace.address,destinationPlace.address,date,time);if(!fixed&&miles>50)throw new Error(tariff.meterOnly?'At this tariff/time, journeys over 50 miles are not automatically priced. Please contact us for a price.':'Journeys over 50 miles without an approved fixed fare need a personal quote.');const runout=await runoutCharge();if(runout.charge===null)throw new Error('This pickup or drop-off is beyond the automatic run-out area and needs a personal quote.');const basePrice=fixed?fixed.price:meterFare(miles,tariff.key),price=basePrice+Number(runout.charge||0);lastEstimate={pickup:pickupPlace.address,destination:destinationPlace.address,date,time,miles,minutes,price,basePrice,runout:runout.charge,tariff:tariff.key};const box=document.getElementById('estimateResult'),fixedText=fixed?fixed.label:`Cornwall Council North Cornwall ${tariff.label} metered fare`;box.innerHTML=`<span class="eyebrow">${fixed?'YOUR FIXED FARE':'YOUR METERED FARE'}</span><div class="fare">£${price.toFixed(2).replace(/\.00$/,'')}</div><div class="route-meta"><span>${miles.toFixed(1)} miles</span><span>about ${minutes} minutes</span><span>${fixedText}</span>${runout.charge?`<span>£${runout.charge} run-out from Bude (${runout.miles.toFixed(1)} mi)</span>`:''}</div><p>${fixed?`Fixed Rob’s Travel fare £${basePrice}${runout.charge?` + £${runout.charge} out-of-town run-out`:''}.`:`${tariff.label} meter calculation${tariff.meterOnly?' — fixed fares are disabled for this period':''}${runout.charge?` + £${runout.charge} run-out`:''}.`}</p>`;box.hidden=false;document.getElementById('bookingForm').hidden=false;box.scrollIntoView({behavior:'smooth',block:'center'});status.textContent=fixed?'Approved fixed fare and applicable Bude run-out charge applied.':`${tariff.label} metered fare applied${tariff.meterOnly?' (fixed fares disabled for this period)':''}.`}catch(err){status.textContent=err.message||'The route could not be calculated.'}finally{b.disabled=false;b.textContent='Calculate instant estimate →'}});
-document.getElementById('bookingForm')?.addEventListener('submit',e=>{e.preventDefault();if(!lastEstimate)return;const params=new URLSearchParams({source:'budetaxi',pickup:lastEstimate.pickup,destination:lastEstimate.destination,date:lastEstimate.date,time:lastEstimate.time,estimate:String(lastEstimate.price)});document.getElementById('bookingForm').hidden=true;document.getElementById('pendingConfirmation').hidden=false;sessionStorage.setItem('budeTaxiWebsiteEstimate',JSON.stringify(lastEstimate));setTimeout(()=>location.href='https://book.robs-travel.co.uk/?'+params.toString(),350)});
-const now=new Date(),d=document.getElementById('date'),t=document.getElementById('time');if(d&&t){d.min=now.toISOString().slice(0,10);d.value=d.min;const r=new Date(now.getTime()+5*60000);t.value=String(r.getHours()).padStart(2,'0')+':'+String(Math.floor(r.getMinutes()/5)*5).padStart(2,'0')}
+function masterFixedFare(a,b,date,time){
+  const p=norm(a),d=norm(b),all=`${p} ${d}`;
+  if(!includesTerm(p,budeTerms)&&!includesTerm(d,budeTerms))return null;
+  const per=period(date,time),tier=vehicleTier(),band=passengerBand();
+  const masterLongs=Array.isArray(window.ROBS_TRAVEL_LONG_DISTANCE_FARES)?window.ROBS_TRAVEL_LONG_DISTANCE_FARES:[];
+  const masterFixeds=Array.isArray(window.ROBS_TRAVEL_FIXED_FARES)?window.ROBS_TRAVEL_FIXED_FARES:[];
+  const longMatch=r=>(r.aliases||[]).some(x=>{const n=norm(x);return !!n&&all.includes(n)});
+  const masterLong=masterLongs.find(longMatch),localLong=fallbackLong.find(longMatch),long=masterLong||localLong;
+  if(long){let price=priced(long.prices,per,tier);if(!price&&masterLong&&localLong)price=priced(localLong.prices,per,tier);if(price)return{price,label:long.label||localLong?.label||'Fixed long-distance fare',fixed:true}}
+  const masterFixed=masterFixeds.find(r=>routeMatch(r,p,d)),localFixed=fallbackFixed.find(r=>routeMatch(r,p,d)),fixed=masterFixed||localFixed;
+  if(!fixed)return null;
+  let price=priced(fixed.prices,per,band);if(!price&&masterFixed&&localFixed)price=priced(localFixed.prices,per,band);
+  return price?{price,label:fixed.label||localFixed?.label||'Fixed fare',fixed:true}:null;
+}
+
+async function routeBetween(origin,destination){
+  const response=await fetch('https://book.robs-travel.co.uk/api/route',{method:'POST',headers:{'content-type':'text/plain;charset=UTF-8'},body:JSON.stringify({origin,destination,intermediates:[]})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok||!data.distanceMeters)throw new Error(data.message||'The route service could not calculate this journey. Please try again.');
+  return{distanceMeters:data.distanceMeters,durationSeconds:data.durationSeconds||0};
+}
+async function route(){
+  if(!pickupPlace||!destinationPlace)throw new Error('Please choose both addresses from the Google suggestions.');
+  return routeBetween({lat:pickupPlace.location.lat(),lng:pickupPlace.location.lng(),placeId:pickupPlace.placeId,address:pickupPlace.address},{lat:destinationPlace.location.lat(),lng:destinationPlace.location.lng(),placeId:destinationPlace.placeId,address:destinationPlace.address});
+}
+async function runoutCharge(){
+  const base={lat:50.8308,lng:-4.5460,address:'Bude town centre'},p=norm(pickupPlace.address),d=norm(destinationPlace.address),candidates=[];
+  if(includesTerm(p,budeTerms))candidates.push(pickupPlace);
+  if(includesTerm(d,budeTerms))candidates.push(destinationPlace);
+  if(!candidates.length)candidates.push(pickupPlace,destinationPlace);
+  let best=Infinity;
+  for(const c of candidates){
+    try{const r=await routeBetween(base,{lat:c.location.lat(),lng:c.location.lng(),placeId:c.placeId,address:c.address});best=Math.min(best,r.distanceMeters/1609.344)}
+    catch{const cp=point(c);if(cp)best=Math.min(best,haversine(base,cp))}
+  }
+  if(!Number.isFinite(best))return{charge:0,miles:0};
+  const band=runoutBands.find(x=>best<=x[0]);return band?{charge:band[1],miles:best}:{charge:null,miles:best};
+}
+
+const estimateForm=document.getElementById('estimateForm');
+estimateForm?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const button=document.getElementById('estimateButton'),status=document.getElementById('mapsStatus'),date=document.getElementById('date').value,time=document.getElementById('time').value;
+  const box=document.getElementById('estimateResult'),booking=document.getElementById('bookingForm');
+  syncVehicleToPassengers();lastEstimate=null;
+  if(box){box.hidden=true;box.innerHTML=''}if(booking)booking.hidden=true;
+  if(document.getElementById('vehicle').value==='executive'){status.textContent='Executive journeys are individually quoted. Please call or WhatsApp Rob’s Travel.';return}
+  button.disabled=true;button.textContent='Calculating route…';
+  try{
+    await pricingReady;
+    const r=await route(),miles=r.distanceMeters/1609.344,minutes=Math.max(1,Math.round(r.durationSeconds/60)),tariff=tariffInfo(date,time);
+    const fixed=tariff.meterOnly?null:masterFixedFare(pickupPlace.address,destinationPlace.address,date,time);
+    if(!fixed&&miles>50)throw new Error(tariff.meterOnly?'At this tariff/time, journeys over 50 miles are not automatically priced. Please contact us for a price.':'Journeys over 50 miles without an approved fixed fare need a personal quote.');
+    const runout=await runoutCharge();
+    if(runout.charge===null)throw new Error('This pickup or drop-off is beyond the automatic run-out area and needs a personal quote.');
+    const basePrice=fixed?fixed.price:meterFare(miles,tariff.key),price=basePrice+Number(runout.charge||0);
+    lastEstimate={pickup:pickupPlace.address,destination:destinationPlace.address,date,time,miles,minutes,price,basePrice,runout:runout.charge,tariff:tariff.key,passengers:document.getElementById('passengers').selectedOptions[0].text,vehicle:document.getElementById('vehicle').selectedOptions[0].text};
+    const fixedText=fixed?fixed.label:`Cornwall Council North Cornwall ${tariff.label} metered fare`;
+    box.innerHTML=`<span class="eyebrow">${fixed?'YOUR FIXED FARE':'YOUR METERED FARE'}</span><div class="fare">£${price.toFixed(2).replace(/\.00$/,'')}</div><div class="route-meta"><span>${miles.toFixed(1)} miles</span><span>about ${minutes} minutes</span><span>${fixedText}</span>${runout.charge?`<span>£${runout.charge} run-out from Bude (${runout.miles.toFixed(1)} mi)</span>`:''}</div><p>${fixed?`Approved fixed fare £${basePrice}${runout.charge?` + £${runout.charge} out-of-town run-out`:''}.`:`${tariff.label} meter calculation${tariff.meterOnly?' — fixed fares are disabled for this period':''}${runout.charge?` + £${runout.charge} run-out`:''}.`}</p>`;
+    box.hidden=false;booking.hidden=false;box.scrollIntoView({behavior:'smooth',block:'center'});
+    status.textContent=fixed?'Approved fixed fare and applicable Bude run-out charge applied.':`${tariff.label} metered fare applied${tariff.meterOnly?' (fixed fares disabled for this period)':''}.`;
+  }catch(err){
+    if(box){box.hidden=true;box.innerHTML=''}if(booking)booking.hidden=true;
+    status.textContent=err.message||'The route could not be calculated. Please check the addresses and try again.';
+  }finally{
+    button.disabled=false;
+    button.innerHTML='Calculate instant estimate <span>→</span>';
+  }
+});
+
+const bookingForm=document.getElementById('bookingForm');
+bookingForm?.addEventListener('submit',e=>{
+  e.preventDefault();if(!lastEstimate)return;
+  const isBude=/^(www\.)?budetaxi\.co\.uk$/i.test(location.hostname);
+  const params=new URLSearchParams({source:isBude?'budetaxi':'website',pickup:lastEstimate.pickup,destination:lastEstimate.destination,date:lastEstimate.date,time:lastEstimate.time,passengers:document.getElementById('passengers').value,vehicle:document.getElementById('vehicle').value,estimate:String(lastEstimate.price)});
+  bookingForm.hidden=true;document.getElementById('pendingConfirmation').hidden=false;
+  sessionStorage.setItem(isBude?'budeTaxiWebsiteEstimate':'robsTravelWebsiteEstimate',JSON.stringify(lastEstimate));
+  setTimeout(()=>{window.location.href='https://book.robs-travel.co.uk/?'+params.toString()},400);
+});
+
+const now=new Date(),date=document.getElementById('date'),time=document.getElementById('time');
+if(date&&time){date.min=localDateKey(now);date.value=date.min;const rounded=new Date(now.getTime()+5*60000);rounded.setMinutes(Math.floor(rounded.getMinutes()/5)*5,0,0);time.value=String(rounded.getHours()).padStart(2,'0')+':'+String(rounded.getMinutes()).padStart(2,'0')}
