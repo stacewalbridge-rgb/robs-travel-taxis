@@ -16,7 +16,11 @@ const budeTerms=['','bude','stratton','poughill','marhamchurch','widemouth bay',
 const runoutBands=[[5,0],[6,10],[7,12],[8,14],[9,16],[10,18],[15,20],[20,30],[25,40],[30,50],[35,60],[40,70],[45,80],[50,90]];
 function passengerBand(){const p=String(document.getElementById('passengers')?.value||'1-4');if(p.includes('7')||p.includes('8'))return'7-8';if(p.includes('5')||p.includes('6'))return'5-6';return'1-4'}
 function vehicleTier(){const v=document.getElementById('vehicle')?.value||'standard';return v==='minibus'?'eight':v==='mpv'?'mpv':'standard'}
-function period(date,time){const d=new Date(`${date}T${time||'12:00'}`),h=Number((time||'12:00').split(':')[0]);return [0,6].includes(d.getDay())||h<7||h>=19?'night':'day'}
+function requiredVehicleForPassengers(){const band=passengerBand();return band==='7-8'?'minibus':band==='5-6'?'mpv':'standard'}
+function syncVehicleToPassengers(){const vehicle=document.getElementById('vehicle');if(!vehicle)return;vehicle.value=requiredVehicleForPassengers()}
+document.getElementById('passengers')?.addEventListener('change',syncVehicleToPassengers);
+syncVehicleToPassengers();
+function period(date,time){const [hour='12',minute='0']=String(time||'12:00').split(':'),minutes=Number(hour)*60+Number(minute);return minutes<7*60||minutes>19*60?'night':'day'}
 function haversine(a,b){const rad=x=>x*Math.PI/180,R=3958.7613,dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng),q=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
 function point(place){return place?.location?{lat:place.location.lat(),lng:place.location.lng()}:null}
 function routeMatch(route,p,d){const from=(route.from||[]).map(norm),to=(route.to||[]).map(norm),f=from.some(x=>p.includes(x))&&to.some(x=>d.includes(x)),r=route.bidirectional!==false&&to.some(x=>p.includes(x))&&from.some(x=>d.includes(x));if(!(f||r))return false;if(route.zone?.centre&&route.zone?.radiusMiles){const target=f?point(destinationPlace):point(pickupPlace);if(!target||haversine(route.zone.centre,target)>Number(route.zone.radiusMiles))return false}return true}
