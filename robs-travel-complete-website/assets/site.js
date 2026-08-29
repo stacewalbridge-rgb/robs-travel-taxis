@@ -105,20 +105,41 @@ function routeMatch(route,p,d){
   if(route.zone?.centre&&route.zone?.radiusMiles){const target=f?point(destinationPlace):point(pickupPlace);if(!target||haversine(route.zone.centre,target)>Number(route.zone.radiusMiles))return false}
   return true;
 }
+function endpointFixedMatch(route,p,d){
+  const to=(route.to||[]).map(norm).filter(Boolean);
+  const pickupIsFixed=to.some(x=>p.includes(x));
+  const destinationIsFixed=to.some(x=>d.includes(x));
+  if(destinationIsFixed&&!pickupIsFixed)return{matched:true,runoutPlace:'pickup'};
+  if(route.bidirectional!==false&&pickupIsFixed&&!destinationIsFixed)return{matched:true,runoutPlace:'destination'};
+  return{matched:false,runoutPlace:null};
+}
 function priced(table,per,key){return Number((table?.[per]||table?.day||table||{})[key])||0}
 function masterFixedFare(a,b,date,time){
   const p=norm(a),d=norm(b),all=`${p} ${d}`;
-  if(!includesTerm(p,budeTerms)&&!includesTerm(d,budeTerms))return null;
   const per=period(date,time),tier=vehicleTier(),band=passengerBand();
   const masterLongs=Array.isArray(window.ROBS_TRAVEL_LONG_DISTANCE_FARES)?window.ROBS_TRAVEL_LONG_DISTANCE_FARES:[];
   const masterFixeds=Array.isArray(window.ROBS_TRAVEL_FIXED_FARES)?window.ROBS_TRAVEL_FIXED_FARES:[];
   const longMatch=r=>(r.aliases||[]).some(x=>{const n=norm(x);return !!n&&all.includes(n)});
   const masterLong=masterLongs.find(longMatch),localLong=fallbackLong.find(longMatch),long=masterLong||localLong;
-  if(long){let price=priced(long.prices,per,tier);if(!price&&masterLong&&localLong)price=priced(localLong.prices,per,tier);if(price)return{price,label:long.label||localLong?.label||'Fixed long-distance fare',fixed:true}}
-  const masterFixed=masterFixeds.find(r=>routeMatch(r,p,d)),localFixed=fallbackFixed.find(r=>routeMatch(r,p,d)),fixed=masterFixed||localFixed;
+  if(long){
+    let price=priced(long.prices,per,tier);if(!price&&masterLong&&localLong)price=priced(localLong.prices,per,tier);
+    if(price){
+      const aliases=(long.aliases||[]).map(norm).filter(Boolean),pickupIsFixed=aliases.some(x=>p.includes(x)),destinationIsFixed=aliases.some(x=>d.includes(x));
+      const runoutPlace=destinationIsFixed&&!pickupIsFixed?'pickup':pickupIsFixed&&!destinationIsFixed?'destination':null;
+      return{price,label:long.label||localLong?.label||'Fixed long-distance fare',fixed:true,runoutPlace};
+    }
+  }
+  let fixed=masterFixeds.find(r=>routeMatch(r,p,d))||fallbackFixed.find(r=>routeMatch(r,p,d)),runoutPlace=null;
+  if(!fixed){
+    const masterEndpoint=masterFixeds.map(r=>({route:r,match:endpointFixedMatch(r,p,d)})).find(x=>x.match.matched);
+    const localEndpoint=fallbackFixed.map(r=>({route:r,match:endpointFixedMatch(r,p,d)})).find(x=>x.match.matched);
+    const endpoint=masterEndpoint||localEndpoint;
+    if(endpoint){fixed=endpoint.route;runoutPlace=endpoint.match.runoutPlace;}
+  }
   if(!fixed)return null;
-  let price=priced(fixed.prices,per,band);if(!price&&masterFixed&&localFixed)price=priced(localFixed.prices,per,band);
-  return price?{price,label:fixed.label||localFixed?.label||'Fixed fare',fixed:true}:null;
+  const localFixed=fallbackFixed.find(r=>r.label===fixed.label)||fallbackFixed.find(r=>endpointFixedMatch(r,p,d).matched)||null;
+  let price=priced(fixed.prices,per,band);if(!price&&localFixed)price=priced(localFixed.prices,per,band);
+  return price?{price,label:fixed.label||localFixed?.label||'Fixed fare',fixed:true,runoutPlace}:null;
 }
 
 async function routeBetween(origin,destination){
@@ -131,11 +152,14 @@ async function route(){
   if(!pickupPlace||!destinationPlace)throw new Error('Please choose both addresses from the Google suggestions.');
   return routeBetween({lat:pickupPlace.location.lat(),lng:pickupPlace.location.lng(),placeId:pickupPlace.placeId,address:pickupPlace.address},{lat:destinationPlace.location.lat(),lng:destinationPlace.location.lng(),placeId:destinationPlace.placeId,address:destinationPlace.address});
 }
-async function runoutCharge(){
+async function runoutCharge(preferredPlace=null){
   const base={lat:50.8308,lng:-4.5460,address:'Bude town centre'},p=norm(pickupPlace.address),d=norm(destinationPlace.address),candidates=[];
-  if(includesTerm(p,budeTerms))candidates.push(pickupPlace);
-  if(includesTerm(d,budeTerms))candidates.push(destinationPlace);
-  if(!candidates.length)candidates.push(pickupPlace,destinationPlace);
+  if(preferredPlace)candidates.push(preferredPlace);
+  else{
+    if(includesTerm(p,budeTerms))candidates.push(pickupPlace);
+    if(includesTerm(d,budeTerms))candidates.push(destinationPlace);
+    if(!candidates.length)candidates.push(pickupPlace,destinationPlace);
+  }
   let best=Infinity;
   for(const c of candidates){
     try{const r=await routeBetween(base,{lat:c.location.lat(),lng:c.location.lng(),placeId:c.placeId,address:c.address});best=Math.min(best,r.distanceMeters/1609.344)}
@@ -159,7 +183,8 @@ estimateForm?.addEventListener('submit',async e=>{
     const r=await route(),miles=r.distanceMeters/1609.344,minutes=Math.max(1,Math.round(r.durationSeconds/60)),tariff=tariffInfo(date,time);
     const fixed=tariff.meterOnly?null:masterFixedFare(pickupPlace.address,destinationPlace.address,date,time);
     if(!fixed&&miles>50)throw new Error(tariff.meterOnly?'At this tariff/time, journeys over 50 miles are not automatically priced. Please contact us for a price.':'Journeys over 50 miles without an approved fixed fare need a personal quote.');
-    const runout=await runoutCharge();
+    const preferredRunout=fixed?.runoutPlace==='pickup'?pickupPlace:fixed?.runoutPlace==='destination'?destinationPlace:null;
+    const runout=await runoutCharge(preferredRunout);
     if(runout.charge===null)throw new Error('This pickup or drop-off is beyond the automatic run-out area and needs a personal quote.');
     const basePrice=fixed?fixed.price:meterFare(miles,tariff.key),price=basePrice+Number(runout.charge||0);
     lastEstimate={pickup:pickupPlace.address,destination:destinationPlace.address,date,time,miles,minutes,price,basePrice,runout:runout.charge,tariff:tariff.key,passengers:document.getElementById('passengers').selectedOptions[0].text,vehicle:document.getElementById('vehicle').selectedOptions[0].text};
