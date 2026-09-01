@@ -20,44 +20,8 @@
   {
     "@context":"https://schema.org",
     "@graph":[
-      {
-        "@type":"WebSite",
-        "@id":"https://robs-travel.co.uk/#website",
-        "url":"https://robs-travel.co.uk/",
-        "name":"Rob's Travel Taxis",
-        "inLanguage":"en-GB"
-      },
-      {
-        "@type":"TaxiService",
-        "@id":"https://robs-travel.co.uk/#taxi-service",
-        "name":"Rob's Travel Taxis",
-        "url":"https://robs-travel.co.uk/",
-        "telephone":"+447771824141",
-        "email":"info@robs-travel.co.uk",
-        "description":"Long-established Bude taxi and travel service providing pre-booked local journeys, airport transfers, long-distance travel, group transport, executive travel on request and wedding transport.",
-        "areaServed":[
-          {"@type":"City","name":"Bude"},
-          {"@type":"Place","name":"Stratton"},
-          {"@type":"Place","name":"Holsworthy"},
-          {"@type":"Place","name":"Kilkhampton"},
-          {"@type":"Place","name":"Morwenstow"},
-          {"@type":"Place","name":"Widemouth Bay"},
-          {"@type":"Place","name":"Crackington Haven"},
-          {"@type":"AdministrativeArea","name":"North Cornwall"},
-          {"@type":"AdministrativeArea","name":"Devon"}
-        ],
-        "hasOfferCatalog":{
-          "@type":"OfferCatalog",
-          "name":"Taxi and travel services",
-          "itemListElement":[
-            {"@type":"Offer","itemOffered":{"@type":"Service","name":"Bude local taxi journeys"}},
-            {"@type":"Offer","itemOffered":{"@type":"Service","name":"Airport transfers"}},
-            {"@type":"Offer","itemOffered":{"@type":"Service","name":"Long-distance taxi travel"}},
-            {"@type":"Offer","itemOffered":{"@type":"Service","name":"MPV and minibus travel"}},
-            {"@type":"Offer","itemOffered":{"@type":"Service","name":"Wedding transport"}}
-          ]
-        }
-      }
+      {"@type":"WebSite","@id":"https://robs-travel.co.uk/#website","url":"https://robs-travel.co.uk/","name":"Rob's Travel Taxis","inLanguage":"en-GB"},
+      {"@type":"TaxiService","@id":"https://robs-travel.co.uk/#taxi-service","name":"Rob's Travel Taxis","url":"https://robs-travel.co.uk/","telephone":"+447771824141","email":"info@robs-travel.co.uk","description":"Long-established Bude taxi and travel service providing pre-booked local journeys, airport transfers, long-distance travel, group transport, executive travel on request and wedding transport.","areaServed":[{"@type":"City","name":"Bude"},{"@type":"Place","name":"Stratton"},{"@type":"Place","name":"Holsworthy"},{"@type":"Place","name":"Kilkhampton"},{"@type":"Place","name":"Morwenstow"},{"@type":"Place","name":"Widemouth Bay"},{"@type":"Place","name":"Crackington Haven"},{"@type":"AdministrativeArea","name":"North Cornwall"},{"@type":"AdministrativeArea","name":"Devon"}],"hasOfferCatalog":{"@type":"OfferCatalog","name":"Taxi and travel services","itemListElement":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Bude local taxi journeys"}},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Airport transfers"}},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Long-distance taxi travel"}},{"@type":"Offer","itemOffered":{"@type":"Service","name":"MPV and minibus travel"}},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Wedding transport"}}]}}
     ]
   }
   </script>
@@ -65,73 +29,14 @@
   <style>.hero-photo{background:linear-gradient(90deg,rgba(3,27,44,.12),transparent 55%),url('https://northcornwallairporttransfers.co.uk/assets/hero-reference.webp') center/cover no-repeat!important}</style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container nav">
-      <button class="menu" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button>
-      <a class="brand" href="/" aria-label="Rob's Travel Taxis home">
-        <img src="/assets/robs-travel-round-logo.png" alt="Rob's Travel Taxis">
-        <span><strong>ROB'S TRAVEL</strong><small>TAXIS · BUDE</small></span>
-      </a>
-      <nav class="navlinks"><a href="#quote">Instant quote</a><a href="/services/airport-transfers/">Airports</a><a href="/services/long-distance-taxi/">Long distance</a><a href="/locations/bude/">Areas</a><a href="/contact/">Contact</a></nav>
-      <a class="nav-call" href="tel:+447771824141">Call now</a>
-    </div>
-  </header>
-
+  <header class="site-header"><div class="container nav"><button class="menu" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button><a class="brand" href="/" aria-label="Rob's Travel Taxis home"><img src="/assets/robs-travel-round-logo.png" alt="Rob's Travel Taxis"><span><strong>ROB'S TRAVEL</strong><small>TAXIS · BUDE</small></span></a><nav class="navlinks"><a href="#quote">Instant quote</a><a href="/services/airport-transfers/">Airports</a><a href="/services/long-distance-taxi/">Long distance</a><a href="/locations/bude/">Areas</a><a href="/contact/">Contact</a></nav><a class="nav-call" href="tel:+447771824141">Call now</a></div></header>
   <main>
-    <section class="hero">
-      <div class="hero-photo" role="img" aria-label="Airport terminal and sculpture"></div>
-      <div class="container hero-panel">
-        <span class="eyebrow">ROB'S TRAVEL TAXIS · BUDE</span>
-        <h1>Local taxis.<br><em>Airport & long distance.</em></h1>
-        <p>Smart, Google-powered fare estimates and advance bookings throughout Bude, North Cornwall and across the UK.</p>
-        <div class="hero-actions"><a class="btn btn-dark" href="#quote">Get an instant estimate</a><a class="btn btn-outline" href="tel:+447771824141">Call 0777 182 4141</a></div>
-        <div class="proof"><span>◉ Local knowledge</span><span>✈ Airport specialists</span><span>◇ Cars, MPVs & minibuses</span></div>
-      </div>
-    </section>
-
-    <section class="legacy-strip">
-      <div class="container">
-        <div><span class="eyebrow">ESTABLISHED IN BUDE</span><h2>Local experience that lasts.</h2></div>
-        <p>Rob's Travel Taxis is one of Bude's few remaining long-established taxi and travel companies, and among the town's longest-serving local operators. We specialise in airport transfers, long-distance journeys and reliable pre-booked travel across North Cornwall, Devon and destinations throughout the UK.</p>
-      </div>
-    </section>
-
-    <section class="quote-section" id="quote">
-      <div class="container quote-layout">
-        <div class="quote-intro">
-          <span class="eyebrow">GOOGLE-POWERED INSTANT ESTIMATE</span>
-          <h2>See your fare.<br><em>Then book it.</em></h2>
-          <p>Approved fixed fares are used when permitted. Weekend, bank-holiday and Christmas/New Year special periods use the applicable North Cornwall meter tariff and run-out rules instead.</p>
-          <ol class="steps"><li><b>01</b> Select pickup and destination</li><li><b>02</b> Check the instant estimate</li><li><b>03</b> Request the booking and await confirmation</li></ol>
-        </div>
-
-        <div class="estimator-card">
-          <div class="card-top"><span>AI-assisted journey quote</span><span class="live-dot">● LIVE</span></div>
-          <form id="estimateForm">
-            <label>Pickup address, hotel or postcode<input id="pickup" autocomplete="off" required placeholder="Start typing and choose from Google"></label>
-            <label>Destination<input id="destination" autocomplete="off" required placeholder="Where are you travelling to?"></label>
-            <div class="two"><label>Date<input id="date" type="date" required></label><label>Time<input id="time" type="time" required></label></div>
-            <div class="two"><label>Passengers<select id="passengers"><option value="1-4">1–4 passengers</option><option value="5-6">5–6 passengers</option><option value="7-8">7–8 passengers</option></select></label><label>Vehicle<select id="vehicle"><option value="standard">Standard car</option><option value="mpv">MPV / 6-seater</option><option value="minibus">8-seater minibus</option><option value="executive">Executive — on request</option></select></label></div>
-            <button class="btn btn-gold full-button" type="submit" id="estimateButton">Calculate instant estimate <span>→</span></button>
-            <p class="form-note" id="mapsStatus">Powered by Google Maps route and address data</p>
-          </form>
-          <div id="estimateResult" class="estimate-result" hidden aria-live="polite"></div>
-          <form id="bookingForm" class="booking-form" hidden>
-            <div class="result-heading"><span class="eyebrow">BOOK THIS ESTIMATE</span><h3>Request confirmation</h3><p>No payment is taken now. Rob's Travel will confirm availability.</p></div>
-            <div class="two"><label>Your name<input id="customerName" autocomplete="name" required></label><label>Mobile number<input id="customerPhone" type="tel" autocomplete="tel" required></label></div>
-            <label>Extra details (optional)<textarea id="notes" placeholder="Luggage, flight number, extra pickups or other information"></textarea></label>
-            <button class="btn btn-dark full-button" type="submit">Continue to secure booking</button>
-          </form>
-          <div id="pendingConfirmation" class="pending" hidden><span>→</span><h3>Opening the booking system</h3><p>Your quoted journey is being transferred securely. It will show as awaiting confirmation only after you submit it in the booking system.</p></div>
-        </div>
-      </div>
-    </section>
-
+    <section class="hero"><div class="hero-photo" role="img" aria-label="Airport terminal and sculpture"></div><div class="container hero-panel"><span class="eyebrow">ROB'S TRAVEL TAXIS · BUDE</span><h1>Local taxis.<br><em>Airport & long distance.</em></h1><p>Smart, Google-powered fare estimates and advance bookings throughout Bude, North Cornwall and across the UK.</p><div class="hero-actions"><a class="btn btn-dark" href="#quote">Get an instant estimate</a><a class="btn btn-outline" href="tel:+447771824141">Call 07771 824141</a></div><div class="proof"><span>◉ Local knowledge</span><span>✈ Airport specialists</span><span>◇ Cars, MPVs & minibuses</span></div></div></section>
+    <section class="legacy-strip"><div class="container"><div><span class="eyebrow">ESTABLISHED IN BUDE</span><h2>Local experience that lasts.</h2></div><p>Rob's Travel Taxis is one of Bude's few remaining long-established taxi and travel companies, and among the town's longest-serving local operators. We specialise in airport transfers, long-distance journeys and reliable pre-booked travel across North Cornwall, Devon and destinations throughout the UK.</p></div></section>
+    <section class="quote-section" id="quote"><div class="container quote-layout"><div class="quote-intro"><span class="eyebrow">GOOGLE-POWERED INSTANT ESTIMATE</span><h2>See your fare.<br><em>Then book it.</em></h2><p>Approved fixed fares are used when permitted. Weekend, bank-holiday and Christmas/New Year special periods use the applicable North Cornwall meter tariff and run-out rules instead.</p><ol class="steps"><li><b>01</b> Select pickup and destination</li><li><b>02</b> Check the instant estimate</li><li><b>03</b> Request the booking and await confirmation</li></ol></div><div class="estimator-card"><div class="card-top"><span>AI-assisted journey quote</span><span class="live-dot">● LIVE</span></div><form id="estimateForm"><label>Pickup address, hotel or postcode<input id="pickup" autocomplete="off" required placeholder="Start typing and choose from Google"></label><label>Destination<input id="destination" autocomplete="off" required placeholder="Where are you travelling to?"></label><div class="two"><label>Date<input id="date" type="date" required></label><label>Time<input id="time" type="time" required></label></div><div class="two"><label>Passengers<select id="passengers"><option value="1-4">1–4 passengers</option><option value="5-6">5–6 passengers</option><option value="7-8">7–8 passengers</option></select></label><label>Vehicle<select id="vehicle"><option value="standard">Standard car</option><option value="mpv">MPV / 6-seater</option><option value="minibus">8-seater minibus</option><option value="executive">Executive — on request</option></select></label></div><button class="btn btn-gold full-button" type="submit" id="estimateButton">Calculate instant estimate <span>→</span></button><p class="form-note" id="mapsStatus">Powered by Google Maps route and address data</p></form><div id="estimateResult" class="estimate-result" hidden aria-live="polite"></div><form id="bookingForm" class="booking-form" hidden><div class="result-heading"><span class="eyebrow">BOOK THIS ESTIMATE</span><h3>Request confirmation</h3><p>No payment is taken now. Rob's Travel will confirm availability.</p></div><div class="two"><label>Your name<input id="customerName" autocomplete="name" required></label><label>Mobile number<input id="customerPhone" type="tel" autocomplete="tel" required></label></div><label>Extra details (optional)<textarea id="notes" placeholder="Luggage, flight number, extra pickups or other information"></textarea></label><button class="btn btn-dark full-button" type="submit">Continue to secure booking</button></form><div id="pendingConfirmation" class="pending" hidden><span>→</span><h3>Opening the booking system</h3><p>Your quoted journey is being transferred securely. It will show as awaiting confirmation only after you submit it in the booking system.</p></div></div></div></section>
     <section class="services"><div class="container"><span class="eyebrow">TRAVEL, DONE PROPERLY</span><h2>One trusted local company.<br><em>Every kind of journey.</em></h2><div class="service-grid"><a href="/services/local-taxi/"><b>01</b><h3>Local taxis</h3><p>Bude and surrounding villages, booked in advance.</p><span>Explore →</span></a><a href="/services/airport-transfers/"><b>02</b><h3>Airport transfers</h3><p>Flight-aware travel to airports across the UK.</p><span>Explore →</span></a><a href="/services/long-distance-taxi/"><b>03</b><h3>Long distance</h3><p>Comfortable door-to-door journeys beyond Cornwall.</p><span>Explore →</span></a></div></div></section>
   </main>
-
-  <footer><div class="container footer-grid"><div class="footer-brand"><img src="/assets/robs-travel-round-logo.png" alt=""><div><strong>ROB'S TRAVEL TAXIS</strong><small>BUDE · NORTH CORNWALL</small></div></div><div><b>Call</b><a href="tel:+447771824141">0777 182 4141</a></div><div><b>Book</b><a href="#quote">Instant estimate</a></div><div><b>Service</b><span>Advance booking · Subject to confirmation</span></div></div></footer>
-  <script src="https://book.robs-travel.co.uk/config.js"></script>
-  <script src="/assets/site.js?v=20260822-shared-fare-engine-v4"></script>
+  <footer><div class="container footer-grid"><div class="footer-brand"><img src="/assets/robs-travel-round-logo.png" alt=""><div><strong>ROB'S TRAVEL TAXIS</strong><small>BUDE · NORTH CORNWALL</small></div></div><div><b>Call</b><a href="tel:+447771824141">07771 824141</a></div><div><b>Book</b><a href="#quote">Instant estimate</a></div><div><b>Service</b><span>Advance booking · Subject to confirmation</span></div></div></footer>
+  <script src="https://book.robs-travel.co.uk/config.js"></script><script src="/assets/site.js?v=20260822-shared-fare-engine-v4"></script>
 </body>
 </html>
