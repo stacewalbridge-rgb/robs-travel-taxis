@@ -1,0 +1,9 @@
+{
+  "name":"WhyDrive",
+  "short_name":"WhyDrive",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#fffdf8",
+  "theme_color":"#ffffff",
+  "description":"AI-powered. Locally driven."
+}
