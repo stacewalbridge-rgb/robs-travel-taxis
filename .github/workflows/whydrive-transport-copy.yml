@@ -1,0 +1,57 @@
+name: Replace WhyDrive mobility wording
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/whydrive-transport-copy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-copy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout WhyDrive branch
+        uses: actions/checkout@v4
+        with:
+          ref: whydrive-website
+          fetch-depth: 0
+
+      - name: Replace mobility wording with transport wording
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('whydrive-site/index.html')
+          s = p.read_text()
+          replacements = {
+              'WhyDrive | Intelligent Local Mobility Platform': 'WhyDrive | Intelligent Local Transport Platform',
+              'one intelligent local mobility platform': 'one intelligent local transport platform',
+              'The local mobility network,': 'The local transport network,',
+              'One connected mobility layer': 'One connected transport network',
+              'next generation of local mobility.': 'next generation of local transport.',
+              'An intelligent local mobility platform': 'An intelligent local transport platform',
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'Missing expected copy: {old}')
+              s = s.replace(old, new)
+          if 'mobility' in s.lower():
+              raise SystemExit('Mobility wording still present after replacement')
+          p.write_text(s)
+          PY
+
+      - name: Commit WhyDrive transport wording
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'WhyDrive Deploy Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add whydrive-site/index.html
+          git diff --cached --check
+          git commit -m 'Replace mobility wording with transport network language'
+          git push origin HEAD:whydrive-website
