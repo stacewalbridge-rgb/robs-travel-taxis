@@ -26,10 +26,37 @@ function loadMaps(){
     s.async=true;s.defer=true;s.onerror=reject;document.head.appendChild(s);
   });
 }
+
+const HEATHROW_TERMINALS=[
+  {n:'2',label:'Heathrow Airport – Terminal 2',address:'Heathrow Airport Terminal 2, Hounslow TW6, UK',lat:51.4700,lng:-0.4524},
+  {n:'3',label:'Heathrow Airport – Terminal 3',address:'Heathrow Airport Terminal 3, Hounslow TW6, UK',lat:51.4715,lng:-0.4565},
+  {n:'4',label:'Heathrow Airport – Terminal 4',address:'Heathrow Airport Terminal 4, Hounslow TW6, UK',lat:51.4599,lng:-0.4460},
+  {n:'5',label:'Heathrow Airport – Terminal 5',address:'Heathrow Airport Terminal 5, Wallis Road, Longford, Hounslow TW6, UK',lat:51.4722,lng:-0.4889}
+];
+function isHeathrowSelection(place){
+  const s=norm(`${place?.name||''} ${place?.formatted_address||place?.address||''}`);
+  return s.includes('heathrow')||s.includes(' lhr ')||s.startsWith('lhr ')||s.includes('tw6')||s.includes('terminal 5 wallis')||s.includes('wallis road longford')||s.includes('terminal 4 nelson');
+}
+function closeHeathrowPicker(){document.getElementById('rtWebsiteHeathrowPicker')?.remove()}
+function openHeathrowPicker(input,setter){
+  closeHeathrowPicker();
+  const host=document.createElement('div');host.id='rtWebsiteHeathrowPicker';
+  host.innerHTML=`<div style="position:fixed;inset:0;z-index:2147483647;background:#020812e8;display:grid;place-items:center;padding:18px"><section role="dialog" aria-modal="true" aria-labelledby="rtHwWebsiteTitle" style="position:relative;width:min(94vw,520px);background:#fff;color:#111827;border-radius:24px;padding:24px 20px 22px;box-shadow:0 24px 70px #000a;text-align:center"><button type="button" data-hw-close aria-label="Close" style="position:absolute;right:10px;top:8px;width:42px;height:42px;border:0;background:transparent;color:#111827;font-size:32px">×</button><div style="font-size:34px;margin:2px 0 8px">✈️</div><h2 id="rtHwWebsiteTitle" style="font-size:26px;line-height:1.1;margin:0 32px 8px;font-weight:900">Which Heathrow terminal?</h2><p style="margin:0 auto 18px;max-width:430px;color:#475569;font-size:15px;line-height:1.4">Heathrow uses the approved fixed fare. Choose Terminal 2, 3, 4 or 5 so the correct terminal and route are used.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${HEATHROW_TERMINALS.map(t=>`<button type="button" data-hw-terminal="${t.n}" style="min-height:82px;border:2px solid #d5a51f;border-radius:17px;background:#111827;color:#fff;padding:12px"><strong style="display:block;font-size:20px">Terminal ${t.n}</strong><span style="font-size:13px;color:#f7d66d;font-weight:750">Heathrow Airport</span></button>`).join('')}</div><small style="display:block;margin-top:14px;color:#64748b;line-height:1.35">Pickups already on the normal Heathrow route corridor use the same fixed fare; genuine detours use the run-out engine.</small></section></div>`;
+  document.body.appendChild(host);
+  host.querySelector('[data-hw-close]').onclick=closeHeathrowPicker;
+  host.firstElementChild.onclick=e=>{if(e.target===e.currentTarget)closeHeathrowPicker()};
+  host.querySelectorAll('[data-hw-terminal]').forEach(b=>b.onclick=()=>{
+    const t=HEATHROW_TERMINALS.find(x=>x.n===b.dataset.hwTerminal);if(!t)return;
+    input.value=t.address;
+    setter({address:t.address,location:{lat:()=>t.lat,lng:()=>t.lng},placeId:''});
+    closeHeathrowPicker();
+    const s=document.getElementById('mapsStatus');if(s)s.textContent=`${t.label} selected. Heathrow fixed-fare pricing will be used.`;
+  });
+}
 function attachPlace(id,setter){
   const input=document.getElementById(id);if(!input)return;
   const ac=new google.maps.places.Autocomplete(input,{componentRestrictions:{country:'gb'},fields:['formatted_address','geometry','name','place_id']});
-  ac.addListener('place_changed',()=>{const p=ac.getPlace();if(!p.geometry)return;input.value=p.formatted_address||p.name;setter({address:input.value,location:p.geometry.location,placeId:p.place_id})});
+  ac.addListener('place_changed',()=>{const p=ac.getPlace();if(!p.geometry)return;input.value=p.formatted_address||p.name;const selected={address:input.value,location:p.geometry.location,placeId:p.place_id};setter(selected);if(isHeathrowSelection(p))openHeathrowPicker(input,setter)});
   input.addEventListener('input',()=>setter(null));
 }
 loadMaps().then(()=>{attachPlace('pickup',p=>pickupPlace=p);attachPlace('destination',p=>destinationPlace=p)}).catch(()=>{const s=document.getElementById('mapsStatus');if(s)s.textContent='Google address search could not load. Please refresh and try again.'});
@@ -41,7 +68,7 @@ const fallbackFixed=[
  {label:'Okehampton / Okehampton Railway Station',from:['bude','stratton','poughill','marhamchurch','widemouth bay','grimscott','poundstock','morwenstow','kilkhampton','marsland','welcombe','northcott','sandymouth'],to:['okehampton','okehampton railway station','okehampton train station','station road okehampton','ex20 1ej'],bidirectional:true,zone:{centre:{lat:50.7382,lng:-4.0018},radiusMiles:3},prices:{day:{'1-4':90,'5-6':120,'7-8':150},night:{'1-4':120,'5-6':150,'7-8':190}}}
 ];
 const fallbackLong=[
- {label:'Heathrow Airport',aliases:['heathrow airport','london heathrow','heathrow terminal 2','heathrow terminal 3','heathrow terminal 4','heathrow terminal 5','tw6'],prices:{standard:400,mpv:460,eight:550}},
+ {label:'Heathrow Airport',aliases:['heathrow airport','london heathrow','heathrow airport lhr','heathrow terminal 2','heathrow terminal 3','heathrow terminal 4','heathrow terminal 5','terminal 2 hounslow','terminal 3 hounslow','terminal 4 hounslow','terminal 5 hounslow','wallis road longford','tw6'],prices:{standard:400,mpv:460,eight:550}},
  {label:'Gatwick Airport',aliases:['gatwick airport','london gatwick','gatwick north terminal','gatwick south terminal','rh6'],prices:{standard:450,mpv:500,eight:600}},
  {label:'Bristol Airport',aliases:['bristol airport','bristol international airport','bs48 3dy'],prices:{standard:240,mpv:290,eight:340}},
  {label:'Birmingham Airport',aliases:['birmingham airport','bhx airport','b26 3qj'],prices:{standard:380,mpv:420,eight:490}},
@@ -124,7 +151,7 @@ function masterFixedFare(a,b,date,time){
   if(long){
     let price=priced(long.prices,per,tier);if(!price&&masterLong&&localLong)price=priced(localLong.prices,per,tier);
     if(price){
-      const aliases=(long.aliases||[]).map(norm).filter(Boolean),pickupIsFixed=aliases.some(x=>p.includes(x)),destinationIsFixed=aliases.some(x=>d.includes(x));
+      const aliases=[...(long.aliases||[]),...(localLong?.aliases||[])].map(norm).filter(Boolean),pickupIsFixed=aliases.some(x=>p.includes(x)),destinationIsFixed=aliases.some(x=>d.includes(x));
       const runoutPlace=destinationIsFixed&&!pickupIsFixed?'pickup':pickupIsFixed&&!destinationIsFixed?'destination':null;
       return{price,label:long.label||localLong?.label||'Fixed long-distance fare',fixed:true,runoutPlace};
     }
@@ -142,18 +169,28 @@ function masterFixedFare(a,b,date,time){
   return price?{price,label:fixed.label||localFixed?.label||'Fixed fare',fixed:true,runoutPlace}:null;
 }
 
-async function routeBetween(origin,destination){
-  const response=await fetch('https://book.robs-travel.co.uk/api/route',{method:'POST',headers:{'content-type':'text/plain;charset=UTF-8'},body:JSON.stringify({origin,destination,intermediates:[]})});
+function placePoint(place){return{lat:place.location.lat(),lng:place.location.lng(),placeId:place.placeId,address:place.address}}
+async function routeBetween(origin,destination,intermediates=[]){
+  const response=await fetch('https://book.robs-travel.co.uk/api/route',{method:'POST',headers:{'content-type':'text/plain;charset=UTF-8'},body:JSON.stringify({origin,destination,intermediates})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.ok||!data.distanceMeters)throw new Error(data.message||'The route service could not calculate this journey. Please try again.');
   return{distanceMeters:data.distanceMeters,durationSeconds:data.durationSeconds||0};
 }
 async function route(){
   if(!pickupPlace||!destinationPlace)throw new Error('Please choose both addresses from the Google suggestions.');
-  return routeBetween({lat:pickupPlace.location.lat(),lng:pickupPlace.location.lng(),placeId:pickupPlace.placeId,address:pickupPlace.address},{lat:destinationPlace.location.lat(),lng:destinationPlace.location.lng(),placeId:destinationPlace.placeId,address:destinationPlace.address});
+  return routeBetween(placePoint(pickupPlace),placePoint(destinationPlace));
 }
-async function runoutCharge(preferredPlace=null){
+async function runoutCharge(preferredPlace=null,fixedPlace=null){
   const base={lat:50.8308,lng:-4.5460,address:'Bude town centre'},p=norm(pickupPlace.address),d=norm(destinationPlace.address),candidates=[];
+  if(preferredPlace&&fixedPlace){
+    try{
+      const baseline=await routeBetween(base,placePoint(fixedPlace));
+      const via=await routeBetween(base,placePoint(fixedPlace),[placePoint(preferredPlace)]);
+      const detour=Math.max(0,(Number(via.distanceMeters)-Number(baseline.distanceMeters))/1609.344);
+      const band=runoutBands.find(x=>detour<=x[0]);
+      return band?{charge:band[1],miles:detour,corridor:true}:{charge:null,miles:detour,corridor:true};
+    }catch(error){console.warn('Route-corridor run-out calculation unavailable; using Bude run-out fallback',error)}
+  }
   if(preferredPlace)candidates.push(preferredPlace);
   else{
     if(includesTerm(p,budeTerms))candidates.push(pickupPlace);
@@ -162,11 +199,11 @@ async function runoutCharge(preferredPlace=null){
   }
   let best=Infinity;
   for(const c of candidates){
-    try{const r=await routeBetween(base,{lat:c.location.lat(),lng:c.location.lng(),placeId:c.placeId,address:c.address});best=Math.min(best,r.distanceMeters/1609.344)}
+    try{const r=await routeBetween(base,placePoint(c));best=Math.min(best,r.distanceMeters/1609.344)}
     catch{const cp=point(c);if(cp)best=Math.min(best,haversine(base,cp))}
   }
-  if(!Number.isFinite(best))return{charge:0,miles:0};
-  const band=runoutBands.find(x=>best<=x[0]);return band?{charge:band[1],miles:best}:{charge:null,miles:best};
+  if(!Number.isFinite(best))return{charge:0,miles:0,corridor:false};
+  const band=runoutBands.find(x=>best<=x[0]);return band?{charge:band[1],miles:best,corridor:false}:{charge:null,miles:best,corridor:false};
 }
 
 const estimateForm=document.getElementById('estimateForm');
@@ -184,14 +221,16 @@ estimateForm?.addEventListener('submit',async e=>{
     const fixed=tariff.meterOnly?null:masterFixedFare(pickupPlace.address,destinationPlace.address,date,time);
     if(!fixed&&miles>50)throw new Error(tariff.meterOnly?'At this tariff/time, journeys over 50 miles are not automatically priced. Please contact us for a price.':'Journeys over 50 miles without an approved fixed fare need a personal quote.');
     const preferredRunout=fixed?.runoutPlace==='pickup'?pickupPlace:fixed?.runoutPlace==='destination'?destinationPlace:null;
-    const runout=await runoutCharge(preferredRunout);
-    if(runout.charge===null)throw new Error('This pickup or drop-off is beyond the automatic run-out area and needs a personal quote.');
+    const fixedPlace=preferredRunout===pickupPlace?destinationPlace:preferredRunout===destinationPlace?pickupPlace:null;
+    const runout=await runoutCharge(preferredRunout,fixedPlace);
+    if(runout.charge===null)throw new Error(runout.corridor?'This pickup/drop-off creates more than 50 miles of extra travel away from the normal fixed-fare route and needs a personal quote.':'This pickup or drop-off is beyond the automatic run-out area and needs a personal quote.');
     const basePrice=fixed?fixed.price:meterFare(miles,tariff.key),price=basePrice+Number(runout.charge||0);
-    lastEstimate={pickup:pickupPlace.address,destination:destinationPlace.address,date,time,miles,minutes,price,basePrice,runout:runout.charge,tariff:tariff.key,passengers:document.getElementById('passengers').selectedOptions[0].text,vehicle:document.getElementById('vehicle').selectedOptions[0].text};
+    lastEstimate={pickup:pickupPlace.address,destination:destinationPlace.address,date,time,miles,minutes,price,basePrice,runout:runout.charge,runoutMiles:runout.miles,runoutCorridor:runout.corridor,tariff:tariff.key,passengers:document.getElementById('passengers').selectedOptions[0].text,vehicle:document.getElementById('vehicle').selectedOptions[0].text};
     const fixedText=fixed?fixed.label:`Cornwall Council North Cornwall ${tariff.label} metered fare`;
-    box.innerHTML=`<span class="eyebrow">${fixed?'YOUR FIXED FARE':'YOUR METERED FARE'}</span><div class="fare">£${price.toFixed(2).replace(/\.00$/,'')}</div><div class="route-meta"><span>${miles.toFixed(1)} miles</span><span>about ${minutes} minutes</span><span>${fixedText}</span>${runout.charge?`<span>£${runout.charge} run-out from Bude (${runout.miles.toFixed(1)} mi)</span>`:''}</div><p>${fixed?`Approved fixed fare £${basePrice}${runout.charge?` + £${runout.charge} out-of-town run-out`:''}.`:`${tariff.label} meter calculation${tariff.meterOnly?' — fixed fares are disabled for this period':''}${runout.charge?` + £${runout.charge} run-out`:''}.`}</p>`;
+    const runoutText=runout.charge?runout.corridor?`<span>£${runout.charge} route-corridor run-out (${runout.miles.toFixed(1)} extra mi)</span>`:`<span>£${runout.charge} run-out from Bude (${runout.miles.toFixed(1)} mi)</span>`:fixed&&runout.corridor?'<span>Route-corridor run-out £0 — pickup/drop-off is on the normal fixed-fare route</span>':'';
+    box.innerHTML=`<span class="eyebrow">${fixed?'YOUR FIXED FARE':'YOUR METERED FARE'}</span><div class="fare">£${price.toFixed(2).replace(/\.00$/,'')}</div><div class="route-meta"><span>${miles.toFixed(1)} miles</span><span>about ${minutes} minutes</span><span>${fixedText}</span>${runoutText}</div><p>${fixed?`Approved fixed fare £${basePrice}${runout.charge?` + £${runout.charge} ${runout.corridor?'route-corridor ':'out-of-town '}run-out`:''}.`:`${tariff.label} meter calculation${tariff.meterOnly?' — fixed fares are disabled for this period':''}${runout.charge?` + £${runout.charge} run-out`:''}.`}</p>`;
     box.hidden=false;booking.hidden=false;box.scrollIntoView({behavior:'smooth',block:'center'});
-    status.textContent=fixed?'Approved fixed fare and applicable Bude run-out charge applied.':`${tariff.label} metered fare applied${tariff.meterOnly?' (fixed fares disabled for this period)':''}.`;
+    status.textContent=fixed?(runout.corridor?'Approved fixed fare applied with route-corridor run-out logic.':'Approved fixed fare and applicable Bude run-out charge applied.'):`${tariff.label} metered fare applied${tariff.meterOnly?' (fixed fares disabled for this period)':''}.`;
   }catch(err){
     if(box){box.hidden=true;box.innerHTML=''}if(booking)booking.hidden=true;
     status.textContent=err.message||'The route could not be calculated. Please check the addresses and try again.';
