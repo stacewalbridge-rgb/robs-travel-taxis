@@ -4,7 +4,12 @@ document.head.appendChild(logoFix);
 
 let pickupPlace=null,destinationPlace=null,lastEstimate=null;
 const menu=document.querySelector('.menu'),nav=document.querySelector('.navlinks')||document.querySelector('nav');
+function closeMobileMenu(){
+  nav?.classList.remove('open');
+  menu?.setAttribute('aria-expanded','false');
+}
 menu?.addEventListener('click',()=>{const open=nav?.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));});
+nav?.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeMobileMenu));
 
 function norm(v=''){return String(v).toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function includesTerm(value,terms){const v=norm(value);return (terms||[]).some(x=>{const n=norm(x);return !!n&&v.includes(n)})}
