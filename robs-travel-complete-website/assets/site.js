@@ -10,6 +10,7 @@ function closeMobileMenu(){
 }
 menu?.addEventListener('click',()=>{const open=nav?.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));});
 nav?.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeMobileMenu));
+document.querySelectorAll('a[href^="#"]').forEach(link=>link.addEventListener('click',closeMobileMenu));
 
 function norm(v=''){return String(v).toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function includesTerm(value,terms){const v=norm(value);return (terms||[]).some(x=>{const n=norm(x);return !!n&&v.includes(n)})}
@@ -61,7 +62,7 @@ function openHeathrowPicker(input,setter){
 function attachPlace(id,setter){
   const input=document.getElementById(id);if(!input)return;
   const ac=new google.maps.places.Autocomplete(input,{componentRestrictions:{country:'gb'},fields:['formatted_address','geometry','name','place_id']});
-  ac.addListener('place_changed',()=>{const p=ac.getPlace();if(!p.geometry)return;input.value=p.formatted_address||p.name;const selected={address:input.value,location:p.geometry.location,placeId:p.place_id};setter(selected);if(isHeathrowSelection(p))openHeathrowPicker(input,setter)});
+  ac.addListener('place_changed',()=>{const typed=input.value;const p=ac.getPlace();if(!p.geometry)return;input.value=p.formatted_address||p.name;const selected={address:input.value,location:p.geometry.location,placeId:p.place_id};setter(selected);if(isHeathrowSelection(p)||norm(typed).includes('heathrow'))openHeathrowPicker(input,setter)});
   input.addEventListener('input',()=>setter(null));
 }
 loadMaps().then(()=>{attachPlace('pickup',p=>pickupPlace=p);attachPlace('destination',p=>destinationPlace=p)}).catch(()=>{const s=document.getElementById('mapsStatus');if(s)s.textContent='Google address search could not load. Please refresh and try again.'});
