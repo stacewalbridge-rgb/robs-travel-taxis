@@ -253,8 +253,18 @@ bookingForm?.addEventListener('submit',e=>{
   const params=new URLSearchParams({source:isBude?'budetaxi':'website',pickup:lastEstimate.pickup,destination:lastEstimate.destination,date:lastEstimate.date,time:lastEstimate.time,passengers:document.getElementById('passengers').value,vehicle:document.getElementById('vehicle').value,estimate:String(lastEstimate.price)});
   bookingForm.hidden=true;document.getElementById('pendingConfirmation').hidden=false;
   sessionStorage.setItem(isBude?'budeTaxiWebsiteEstimate':'robsTravelWebsiteEstimate',JSON.stringify(lastEstimate));
-  setTimeout(()=>{window.location.href='https://book.robs-travel.co.uk/?'+params.toString()},400);
+  setTimeout(()=>{window.location.href='https://book.robs-travel.co.uk/whydrive/?source=robstravel&'+params.toString()},400);
 });
 
 const now=new Date(),date=document.getElementById('date'),time=document.getElementById('time');
 if(date&&time){date.min=localDateKey(now);date.value=date.min;const rounded=new Date(now.getTime()+5*60000);rounded.setMinutes(Math.floor(rounded.getMinutes()/5)*5,0,0);time.value=String(rounded.getHours()).padStart(2,'0')+':'+String(rounded.getMinutes()).padStart(2,'0')}
+// WhyDrive direct booking handoff: bypass legacy multi-step booking flow.
+document.addEventListener('click', function(e) {
+  const el=e.target.closest('a,button');
+  if(!el) return;
+  const label=(el.textContent||'').trim();
+  if (/^(book now|book online|book a taxi|book your taxi|book for later|book a ride|book)$/i.test(label) || (el.matches('a') && /book\.robs-travel\.co\.uk/.test(el.href))) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    window.location.assign('https://book.robs-travel.co.uk/whydrive/?source=robstravel');
+  }
+},true);
